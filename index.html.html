@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia con QR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .active-content {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .qr-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .qr-code {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: white;
+        }
+        #qr-reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .scanner-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .attendance-info {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        /* Estilos para el encabezado con logo */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        .logo {
+            max-width: 80px;
+            max-height: 80px;
+            margin-right: 20px;
+        }
+        .school-info {
+            text-align: center;
+        }
+        .school-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+        }
+        .system-name {
+            font-size: 18px;
+            color: #4CAF50;
+            margin: 5px 0 0 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Nuevo header con logo y nombre del colegio -->
+        <div class="header">
+            <img src="ruta-del-logo.png" alt="Logo del Colegio" class="logo" id="schoolLogo">
+            <div class="school-info">
+                <p class="school-name" id="schoolName">Nombre del Colegio</p>
+                <p class="system-name">Sistema de Registro de Asistencia con QR</p>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="openTab('estudiantes')">Gestión de Estudiantes</button>
+            <button class="tab" onclick="openTab('qr')">Generar QR</button>
+            <button class="tab" onclick="openTab('scanner')">Escanear QR</button>
+            <button class="tab" onclick="openTab('asistencia')">Registro de Asistencia</button>
+        </div>
+        
+        <!-- Tab: Gestión de Estudiantes -->
+        <div id="estudiantes" class="tab-content active-content">
+            <h2>Gestión de Estudiantes</h2>
+            
+            <div class="form-group">
+                <label for="nombre">Nombre del Estudiante:</label>
+                <input type="text" id="nombre" placeholder="Nombre completo">
+            </div>
+            
+            <div class="form-group">
+                <label for="id">ID/Matrícula:</label>
+                <input type="text" id="id" placeholder="Número de identificación">
+            </div>
+            
+            <div class="form-group">
+                <label for="curso">Curso/Grupo:</label>
+                <input type="text" id="curso" placeholder="Curso o grupo">
+            </div>
+            
+            <button onclick="agregarEstudiante()">Agregar Estudiante</button>
+            <button onclick="importarEstudiantes()">Importar desde Excel</button>
+            <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
+            
+            <table id="tablaEstudiantes">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>ID/Matrícula</th>
+                        <th>Curso/Grupo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        
+        <!-- Tab: Generar QR -->
+        <div id="qr" class="tab-content">
+            <h2>Generar Códigos QR</h2>
+            <p>Genera códigos QR para los estudiantes registrados.</p>
+            
+            <button onclick="generarTodosQR()">Generar QR para todos los estudiantes</button>
+            <button onclick="descargarQRs()">Descargar todos los QR en ZIP</button>
+            
+            <div class="qr-container" id="qrContainer"></div>
+        </div>
+        
+        <!-- Tab: Escanear QR -->
+        <div id="scanner" class="tab-content">
+            <h2>Escanear Código QR</h2>
+            
+            <div class="scanner-container">
+                <div class="form-group">
+                    <label for="fechaAsistencia">Fecha de Asistencia:</label>
+                    <input type="date" id="fechaAsistencia">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cursoAsistencia">Curso/Grupo:</label>
+                    <select id="cursoAsistencia">
+                        <option value="">Seleccionar curso...</option>
+                    </select>
+                </div>
+                
+                <div id="qr-reader"></div>
+                <div id="scannedResult" class="success"></div>
+            </div>
+        </div>
+        
+        <!-- Tab: Registro de Asistencia -->
+        <div id="asistencia" class="tab-content">
+            <h2>Registro de Asistencia</h2>
+            
+            <div class="form-group">
+                <label for="filtroFecha">Filtrar por Fecha:</label>
+                <input type="date" id="filtroFecha" onchange="filtrarAsistencia()">
+            </div>
+            
+            <div class="form-group">
+                <label for="filtroCurso">Filtrar por Curso:</label>
+                <select id="filtroCurso" onchange="filtrarAsistencia()">
+                    <option value="">Todos los cursos</option>
+                </select>
+            </div>
+            
+            <button onclick="exportarExcel()">Exportar a Excel</button>
+            
+            <table id="tablaAsistencia">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>ID/Matrícula</th>
+                        <th>Curso/Grupo</th>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let estudiantes = [];
+        let asistencias = [];
+        let cursos = new Set();
+        let schoolName = "Nombre del Colegio"; // Variable para el nombre del colegio
+        let logoUrl = "ruta-del-logo.png"; // Variable para la ruta del logo
+
+        // Inicializar al cargar la página
+        window.onload = function() {
+            // Cargar datos guardados
+            cargarDatos();
+            
+            // Configurar fecha actual
+            document.getElementById('fechaAsistencia').valueAsDate = new Date();
+            
+            // Inicializar scanner
+            inicializarScanner();
+            
+            // Cargar configuración del colegio
+            cargarConfiguracionColegio();
+        };
+        
+        // Función para cargar o configurar información del colegio
+        function cargarConfiguracionColegio() {
+            const savedSchoolName = localStorage.getItem('schoolName');
+            const savedLogoUrl = localStorage.getItem('logoUrl');
+            
+            if (savedSchoolName) {
+                schoolName = savedSchoolName;
+                document.getElementById('schoolName').textContent = schoolName;
+            }
+            
+            if (savedLogoUrl) {
+                logoUrl = savedLogoUrl;
+                document.getElementById('schoolLogo').src = logoUrl;
+            }
+            
+            // Agregar opción para configurar el colegio (por ejemplo, en el primer inicio)
+            if (!savedSchoolName || !savedLogoUrl) {
+                setTimeout(configurarColegio, 1000);
+            }
+        }
+        
+        // Función para configurar el nombre y logo del colegio
+        function configurarColegio() {
+            const nuevoNombre = prompt("Ingrese el nombre del colegio:", schoolName);
+            if (nuevoNombre && nuevoNombre.trim() !== "") {
+                schoolName = nuevoNombre.trim();
+                document.getElementById('schoolName').textContent = schoolName;
+                localStorage.setItem('schoolName', schoolName);
+            }
+            
+            const nuevaUrl = prompt("Ingrese la URL del logo del colegio:", logoUrl);
+            if (nuevaUrl && nuevaUrl.trim() !== "") {
+                logoUrl = nuevaUrl.trim();
+                document.getElementById('schoolLogo').src = logoUrl;
+                localStorage.setItem('logoUrl', logoUrl);
+            }
+        }
+
+        // Funciones para gestión de pestañas
+        function openTab(tabName) {
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active-content');
+            }
+            
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active-content');
+            event.currentTarget.classList.add('active');
+            
+            // Activar la cámara solo cuando estamos en la pestaña del scanner
+            if (tabName === 'scanner') {
+                inicializarScanner();
+            }
+        }
+
+        // Funciones para gestión de estudiantes
+        function agregarEstudiante() {
+            const nombre = document.getElementById('nombre').value.trim();
+            const id = document.getElementById('id').value.trim();
+            const curso = document.getElementById('curso').value.trim();
+            
+            if (!nombre || !id || !curso) {
+                alert('Por favor complete todos los campos');
+                return;
+            }
+            
+            // Verificar si ya existe un estudiante con el mismo ID
+            if (estudiantes.some(est => est.id === id)) {
+                alert('Ya existe un estudiante con ese ID');
+                return;
+            }
+            
+            const estudiante = { nombre, id, curso };
+            estudiantes.push(estudiante);
+            cursos.add(curso);
+            
+            actualizarTablaEstudiantes();
+            actualizarSelectCursos();
+            guardarDatos();
+            
+            // Limpiar campos
+            document.getElementById('nombre').value = '';
+            document.getElementById('id').value = '';
+            document.getElementById('curso').value = '';
+        }
+        
+        function eliminarEstudiante(id) {
+            estudiantes = estudiantes.filter(est => est.id !== id);
+            actualizarTablaEstudiantes();
+            actualizarCursos();
+            guardarDatos();
+        }
+        
+        function actualizarTablaEstudiantes() {
+            const tbody = document.querySelector('#tablaEstudiantes tbody');
+            tbody.innerHTML = '';
+            
+            estudiantes.forEach(est => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${est.nombre}</td>
+                    <td>${est.id}</td>
+                    <td>${est.curso}</td>
+                    <td>
+                        <button onclick="eliminarEstudiante('${est.id}')">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function actualizarCursos() {
+            cursos = new Set(estudiantes.map(est => est.curso));
+            actualizarSelectCursos();
+        }
+        
+        function actualizarSelectCursos() {
+            const cursoAsistencia = document.getElementById('cursoAsistencia');
+            const filtroCurso = document.getElementById('filtroCurso');
+            
+            // Guardar selección actual
+            const cursoSeleccionado = cursoAsistencia.value;
+            const filtroSeleccionado = filtroCurso.value;
+            
+            // Limpiar opciones
+            cursoAsistencia.innerHTML = '<option value="">Seleccionar curso...</option>';
+            filtroCurso.innerHTML = '<option value="">Todos los cursos</option>';
+            
+            // Agregar cursos
+            cursos.forEach(curso => {
+                cursoAsistencia.add(new Option(curso, curso));
+                filtroCurso.add(new Option(curso, curso));
+            });
+            
+            // Restaurar selección
+            if (cursos.has(cursoSeleccionado)) {
+                cursoAsistencia.value = cursoSeleccionado;
+            }
+            
+            if (cursos.has(filtroSeleccionado)) {
+                filtroCurso.value = filtroSeleccionado;
+            }
+        }
+        
+        function importarEstudiantes() {
+            const fileInput = document.getElementById('importFile');
+            fileInput.click();
+            
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    jsonData.forEach(row => {
+                        // Ajustar según la estructura de tu Excel
+                        const nombre = row.Nombre || row.nombre;
+                        const id = row.ID || row.id || row.Matricula || row.matricula;
+                        const curso = row.Curso || row.curso || row.Grupo || row.grupo;
+                        
+                        if (nombre && id && curso) {
+                            // Verificar duplicados
+                            if (!estudiantes.some(est => est.id === id.toString())) {
+                                estudiantes.push({
+                                    nombre: nombre.toString(),
+                                    id: id.toString(),
+                                    curso: curso.toString()
+                                });
+                            }
+                        }
+                    });
+                    
+                    actualizarTablaEstudiantes();
+                    actualizarCursos();
+                    guardarDatos();
+                    
+                    alert(`Se importaron ${jsonData.length} estudiantes.`);
+                };
+                reader.readAsArrayBuffer(file);
+            };
+        }
+
+        // Funciones para generar QR
+        function generarTodosQR() {
+            const qrContainer = document.getElementById('qrContainer');
+            qrContainer.innerHTML = '';
+            
+            if (estudiantes.length === 0) {
+                alert('No hay estudiantes registrados.');
+                return;
+            }
+            
+            estudiantes.forEach(est => {
+                const qrDiv = document.createElement('div');
+                qrDiv.className = 'qr-code';
+                
+                const qrContent = JSON.stringify({
+                    id: est.id,
+                    nombre: est.nombre,
+                    curso: est.curso
+                });
+                
+                new QRCode(qrDiv, {
+                    text: qrContent,
+                    width: 128,
+                    height: 128
+                });
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `<p><strong>${est.nombre}</strong><br>${est.id}<br>${est.curso}</p>`;
+                
+                qrDiv.appendChild(infoDiv);
+                qrContainer.appendChild(qrDiv);
+            });
+        }
+        
+        function descargarQRs() {
+            if (estudiantes.length === 0) {
+                alert('No hay estudiantes registrados.');
+                return;
+            }
+            
+            const zip = new JSZip();
+            const promesas = [];
+            
+            estudiantes.forEach(est => {
+                const promise = new Promise(resolve => {
+                    const tempDiv = document.createElement('div');
+                    document.body.appendChild(tempDiv);
+                    
+                    const qrContent = JSON.stringify({
+                        id: est.id,
+                        nombre: est.nombre,
+                        curso: est.curso
+                    });
+                    
+                    new QRCode(tempDiv, {
+                        text: qrContent,
+                        width: 256,
+                        height: 256
+                    });
+                    
+                    setTimeout(() => {
+                        const canvas = tempDiv.querySelector('canvas');
+                        canvas.toBlob(blob => {
+                            const fileName = `QR_${est.id}_${est.nombre.replace(/\s+/g, '_')}.png`;
+                            zip.file(fileName, blob);
+                            document.body.removeChild(tempDiv);
+                            resolve();
+                        });
+                    }, 100);
+                });
+                
+                promesas.push(promise);
+            });
+            
+            Promise.all(promesas).then(() => {
+                zip.generateAsync({ type: 'blob' }).then(content => {
+                    saveAs(content, 'Codigos_QR_Estudiantes.zip');
+                });
+            });
+        }
+
+        // Funciones para escanear QR
+        function inicializarScanner() {
+            const scannerDiv = document.getElementById('qr-reader');
+            if (!scannerDiv) return;
+            
+            // Limpiar el escáner si ya existe
+            scannerDiv.innerHTML = '';
+            
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: 250 };
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                console.error("Error al iniciar la cámara:", err);
+            });
+            
+            // Guardar referencia para detener el escáner al cambiar de pestaña
+            window.currentScanner = html5QrCode;
+        }
+        
+        function onScanSuccess(decodedText) {
+            try {
+                const data = JSON.parse(decodedText);
+                const { id, nombre, curso } = data;
+                
+                // Verificar si el estudiante existe
+                const estudiante = estudiantes.find(est => est.id === id);
+                if (!estudiante) {
+                    mostrarResultadoEscaneo(`Estudiante con ID ${id} no encontrado.`, false);
+                    return;
+                }
+                
+                // Verificar curso seleccionado
+                const cursoSeleccionado = document.getElementById('cursoAsistencia').value;
+                if (cursoSeleccionado && cursoSeleccionado !== curso) {
+                    mostrarResultadoEscaneo(`Error: Este estudiante pertenece al curso ${curso}, no al curso ${cursoSeleccionado}.`, false);
+                    return;
+                }
+                
+                // Verificar si ya se registró asistencia hoy
+                const fecha = document.getElementById('fechaAsistencia').value;
+                const yaRegistrado = asistencias.some(a => 
+                    a.id === id && a.fecha === fecha && a.curso === (cursoSeleccionado || curso)
+                );
+                
+                if (yaRegistrado) {
+                    mostrarResultadoEscaneo(`${nombre} ya ha registrado asistencia hoy.`, true);
+                    return;
+                }
+                
+                // Registrar asistencia
+                const ahora = new Date();
+                const hora = ahora.toLocaleTimeString();
+                
+                asistencias.push({
+                    id,
+                    nombre,
+                    curso: cursoSeleccionado || curso,
+                    fecha,
+                    hora,
+                    estado: 'Presente'
+                });
+                
+                guardarDatos();
+                actualizarTablaAsistencia();
+                
+                mostrarResultadoEscaneo(`¡Asistencia registrada para ${nombre}!`, true);
+                
+            } catch (error) {
+                mostrarResultadoEscaneo("Error al procesar el código QR.", false);
+                console.error(error);
+            }
+        }
+        
+        function onScanError(error) {
+            // Ignorar errores de escaneo
+            console.log("Error de escaneo:", error);
+        }
+        
+        function mostrarResultadoEscaneo(mensaje, exito) {
+            const resultDiv = document.getElementById('scannedResult');
+            resultDiv.textContent = mensaje;
+            resultDiv.style.display = 'block';
+            
+            if (exito) {
+                resultDiv.style.backgroundColor = '#dff0d8';
+                resultDiv.style.color = '#3c763d';
+            } else {
+                resultDiv.style.backgroundColor = '#f2dede';
+                resultDiv.style.color = '#a94442';
+            }
+            
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // Funciones para registro de asistencia
+        function actualizarTablaAsistencia() {
+            const tbody = document.querySelector('#tablaAsistencia tbody');
+            tbody.innerHTML = '';
+            
+            const fechaFiltro = document.getElementById('filtroFecha').value;
+            const cursoFiltro = document.getElementById('filtroCurso').value;
+            
+            const asistenciasFiltradas = asistencias.filter(a => {
+                return (!fechaFiltro || a.fecha === fechaFiltro) && 
+                       (!cursoFiltro || a.curso === cursoFiltro);
+            });
+            
+            asistenciasFiltradas.forEach(a => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${a.nombre}</td>
+                    <td>${a.id}</td>
+                    <td>${a.curso}</td>
+                    <td>${a.fecha}</td>
+                    <td>${a.hora}</td>
+                    <td>${a.estado}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function filtrarAsistencia() {
+            actualizarTablaAsistencia();
+        }
+        
+        function exportarExcel() {
+            const fechaFiltro = document.getElementById('filtroFecha').value;
+            const cursoFiltro = document.getElementById('filtroCurso').value;
+            
+            let asistenciasFiltradas = asistencias;
+            if (fechaFiltro || cursoFiltro) {
+                asistenciasFiltradas = asistencias.filter(a => {
+                    return (!fechaFiltro || a.fecha === fechaFiltro) && 
+                           (!cursoFiltro || a.curso === cursoFiltro);
+                });
+            }
+            
+            if (asistenciasFiltradas.length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+            
+            const worksheet = XLSX.utils.json_to_sheet(asistenciasFiltradas);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencia");
+            
+            let fileName = "Registro_Asistencia";
+            if (fechaFiltro) fileName += `_${fechaFiltro}`;
+            if (cursoFiltro) fileName += `_${cursoFiltro}`;
+            fileName += ".xlsx";
+            
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        // Funciones para almacenamiento local
+        function guardarDatos() {
+            localStorage.setItem('estudiantes', JSON.stringify(estudiantes));
+            localStorage.setItem('asistencias', JSON.stringify(asistencias));
+        }
+        
+        function cargarDatos() {
+            const estGuardados = localStorage.getItem('estudiantes');
+            const asistGuardadas = localStorage.getItem('asistencias');
+            
+            if (estGuardados) {
+                estudiantes = JSON.parse(estGuardados);
+                actualizarTablaEstudiantes();
+            }
+            
+            if (asistGuardadas) {
+                asistencias = JSON.parse(asistGuardadas);
+                actualizarTablaAsistencia();
+            }
+            
+            actualizarCursos();
+        }
+    </script>
+</body>
+</html>
